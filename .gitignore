@@ -59,8 +59,8 @@ chroma_db/
 *.jpeg
 *.webp
 
-wav2lip/results/
-musetalk/results/
+# Không ignore thư mục avatar để đẩy lên Git
+!wav2lip/results/avatars/**
 
 ########################
 # Khác
