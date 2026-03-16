@@ -1,4 +1,53 @@
 var pc = null;
+var remoteStream = null;
+var hasUserInteracted = false;
+
+function unlockByUserGesture() {
+    hasUserInteracted = true;
+    tryPlayMedia();
+}
+
+document.addEventListener('click', unlockByUserGesture, true);
+
+function tryPlayMedia() {
+    const videoElement = document.getElementById('video');
+    const audioElement = document.getElementById('audio');
+
+    if (videoElement) {
+        videoElement.muted = false;
+        videoElement.volume = 1;
+        videoElement.play().catch((err) => {
+            console.warn('video play blocked:', err && err.message ? err.message : err);
+        });
+    }
+
+    if (audioElement) {
+        audioElement.muted = false;
+        audioElement.volume = 1;
+        audioElement.play().catch((err) => {
+            console.warn('audio play blocked:', err && err.message ? err.message : err);
+        });
+    }
+}
+
+function attachRemoteStream(stream) {
+    if (!stream) return;
+    remoteStream = stream;
+
+    const videoElement = document.getElementById('video');
+    if (videoElement && videoElement.srcObject !== stream) {
+        videoElement.srcObject = stream;
+    }
+
+    const audioElement = document.getElementById('audio');
+    if (audioElement && audioElement.srcObject !== stream) {
+        audioElement.srcObject = stream;
+    }
+
+    for (let i = 0; i < 8; i++) {
+        setTimeout(() => tryPlayMedia(), i * 300);
+    }
+}
 
 function negotiate() {
     pc.addTransceiver('video', { direction: 'recvonly' });
@@ -55,14 +104,14 @@ function start() {
 
     // connect audio / video
     pc.addEventListener('track', (evt) => {
-        if (evt.track.kind == 'video') {
-            document.getElementById('video').srcObject = evt.streams[0];
-        } else {
-            document.getElementById('audio').srcObject = evt.streams[0];
+        if (evt.streams && evt.streams[0]) {
+            attachRemoteStream(evt.streams[0]);
         }
     });
 
     document.getElementById('start').style.display = 'none';
+    hasUserInteracted = true;
+    tryPlayMedia();
     negotiate();
     document.getElementById('stop').style.display = 'inline-block';
 }

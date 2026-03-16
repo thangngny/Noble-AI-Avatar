@@ -83,7 +83,10 @@ class BaseTTS:
                 self.state=State.RUNNING
             except queue.Empty:
                 continue
-            self.txt_to_audio(msg)
+            try:
+                self.txt_to_audio(msg)
+            except Exception:
+                logger.exception('tts process error')
         logger.info('ttsreal thread stop')
     
     def txt_to_audio(self,msg:tuple[str, dict]):
@@ -112,9 +115,11 @@ class EdgeTTS(BaseTTS):
             if idx==0:
                 eventpoint={'status':'start','text':text}
                 eventpoint.update(**textevent) #eventpoint={'status':'start','text':text,'msgevent':textevent}
+                logger.info("tts_event_start text=%s", text[:80].replace('\n', ' '))
             elif streamlen<self.chunk:
                 eventpoint={'status':'end','text':text}
                 eventpoint.update(**textevent) #eventpoint={'status':'end','text':text,'msgevent':textevent}
+                logger.info("tts_event_end text=%s", text[:80].replace('\n', ' '))
             self.parent.put_audio_frame(stream[idx:idx+self.chunk],eventpoint)
             idx += self.chunk
         #if streamlen>0:  #skip last frame(not 20ms)

@@ -142,7 +142,10 @@ def inference(quit_event,batch_size,face_list_cycle,audio_feat_queue,audio_out_q
 
         if is_all_silence:
             for i in range(batch_size):
-                res_frame_queue.put((None,__mirror_index(length,index),audio_frames[i*2:i*2+2]))
+                try:
+                    res_frame_queue.put((None,__mirror_index(length,index),audio_frames[i*2:i*2+2]), timeout=0.02)
+                except queue.Full:
+                    logger.warning('res_frame_queue full, drop silent frame')
                 index = index + 1
         else:
             # print('infer=======')
@@ -176,7 +179,10 @@ def inference(quit_event,batch_size,face_list_cycle,audio_feat_queue,audio_out_q
                 counttime=0
             for i,res_frame in enumerate(pred):
                 #self.__pushmedia(res_frame,loop,audio_track,video_track)
-                res_frame_queue.put((res_frame,__mirror_index(length,index),audio_frames[i*2:i*2+2]))
+                try:
+                    res_frame_queue.put((res_frame,__mirror_index(length,index),audio_frames[i*2:i*2+2]), timeout=0.02)
+                except queue.Full:
+                    logger.warning('res_frame_queue full, drop speaking frame')
                 index = index + 1
             #print('total batch time:',time.perf_counter()-starttime)            
     logger.info('lipreal inference processor stop')

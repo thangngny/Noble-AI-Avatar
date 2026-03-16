@@ -1,21 +1,70 @@
+########################
+# Python chung
+########################
 __pycache__/
-build/
-*.egg-info/
+*.py[cod]
+*.pyo
+*.pyd
 *.so
-*.mp4
+*.egg-info/
+build/
+dist/
 
+########################
+# Môi trường ảo
+########################
+env/
+venv/
+.venv/
+.env
+
+########################
+# Hệ điều hành / IDE
+########################
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+########################
+# Log & tạm
+########################
+*.log
 tmp*
 trial*/
+workspace/log_ngp.txt
 
-data
+########################
+# Dữ liệu & model
+########################
+data/
 data_utils/face_tracking/3DMM/*
 data_utils/face_parsing/79999_iter.pth
-
-pretrained
-*.mp4
-.DS_Store
-workspace/log_ngp.txt
-.idea
 models/
-*.log
-dist
+pretrained/
+chroma_db/
+
+########################
+# Kết quả sinh ra (video, ảnh, audio)
+########################
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.wav
+*.mp3
+*.flac
+*.png
+*.jpg
+*.jpeg
+*.webp
+
+wav2lip/results/
+musetalk/results/
+
+########################
+# Khác
+########################
+*.pt
+*.pth
+*.ckpt

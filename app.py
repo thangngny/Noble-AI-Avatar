@@ -43,6 +43,7 @@ import random
 import shutil
 import asyncio
 import torch
+import sys
 from typing import Dict
 from logger import logger
 import gc
@@ -64,6 +65,24 @@ def randN(N)->int:
     min = pow(10, N - 1)
     max = pow(10, N)
     return random.randint(min, max - 1)
+
+def apply_latency_defaults(opt):
+    argv = sys.argv[1:]
+
+    if '-l' not in argv and opt.l == 10:
+        opt.l = 6
+    if '-r' not in argv and opt.r == 10:
+        opt.r = 6
+
+    if '--batch_size' not in argv and opt.batch_size == 16:
+        if opt.model == 'musetalk':
+            opt.batch_size = 4
+        elif opt.model == 'wav2lip':
+            opt.batch_size = 8
+        elif opt.model == 'ultralight':
+            opt.batch_size = 8
+
+    logger.info('latency preset applied: l=%d r=%d batch_size=%d', opt.l, opt.r, opt.batch_size)
 
 def build_nerfreal(sessionid:int)->BaseReal:
     opt.sessionid=sessionid
@@ -146,6 +165,12 @@ async def human(request):
         params = await request.json()
 
         sessionid = params.get('sessionid',0)
+        logger.info(
+            "human request received: sessionid=%s type=%s text_preview=%s",
+            sessionid,
+            params.get('type'),
+            (params.get('text') or '')[:80].replace('\n', ' '),
+        )
         if params.get('interrupt'):
             nerfreals[sessionid].flush_talk()
 
@@ -335,7 +360,7 @@ if __name__ == '__main__':
     parser.add_argument('--customvideo_config', type=str, default='', help="custom action json")
 
     parser.add_argument('--tts', type=str, default='edgetts', help="tts service type") #xtts gpt-sovits cosyvoice fishtts tencent doubao indextts2 azuretts
-    parser.add_argument('--REF_FILE', type=str, default="zh-CN-YunxiaNeural",help="参考文件名或语音模型ID，默认值为 edgetts的语音模型ID zh-CN-YunxiaNeural, 若--tts指定为azuretts, 可以使用Azure语音模型ID, 如zh-CN-XiaoxiaoMultilingualNeural")
+    parser.add_argument('--REF_FILE', type=str, default="vi-VN-HoaiMyNeural",help="参考文件名或语音模型ID，默认值为 edgetts的语音模型ID vi-VN-HoaiMyNeural")
     parser.add_argument('--REF_TEXT', type=str, default=None)
     parser.add_argument('--TTS_SERVER', type=str, default='http://127.0.0.1:9880') # http://localhost:9000
     # parser.add_argument('--CHARACTER', type=str, default='test')
@@ -350,6 +375,7 @@ if __name__ == '__main__':
     parser.add_argument('--listenport', type=int, default=8010, help="web listen port")
 
     opt = parser.parse_args()
+    apply_latency_defaults(opt)
     #app.config.from_object(opt)
     #print(app.config)
     opt.customopt = []

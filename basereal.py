@@ -41,6 +41,31 @@ from fractions import Fraction
 from ttsreal import EdgeTTS,SovitsTTS,XTTS,CosyVoiceTTS,FishTTS,TencentTTS,DoubaoTTS,IndexTTS2,AzureTTS
 from logger import logger
 
+
+def _safe_put_track_frame(track, frame_tuple, loop, queue_name, warn_state: dict, warn_every_sec: float = 2.0):
+    if track is None:
+        return False
+    q = getattr(track, '_queue', None)
+    if q is None:
+        return False
+
+    try:
+        qsize = q.qsize()
+    except Exception:
+        qsize = 0
+
+    maxsize = getattr(q, 'maxsize', 0)
+    if maxsize and qsize >= maxsize - 2:
+        now = time.time()
+        last = warn_state.get(queue_name, 0.0)
+        if now - last >= warn_every_sec:
+            logger.warning('%s overloaded (qsize=%s, max=%s), dropping frame', queue_name, qsize, maxsize)
+            warn_state[queue_name] = now
+        return False
+
+    asyncio.run_coroutine_threadsafe(q.put(frame_tuple), loop)
+    return True
+
 from tqdm import tqdm
 def read_imgs(img_list):
     frames = []
@@ -299,6 +324,7 @@ class BaseReal:
 
     def process_frames(self,quit_event,loop=None,audio_track=None,video_track=None):
         enable_transition = False  # 设置为False禁用过渡效果，True启用
+        drop_warn_state = {}
         
         if enable_transition:
             _last_speaking = False
@@ -378,7 +404,7 @@ class BaseReal:
             else: #webrtc
                 image = combine_frame
                 new_frame = VideoFrame.from_ndarray(image, format="bgr24")
-                asyncio.run_coroutine_threadsafe(video_track._queue.put((new_frame,None)), loop)
+                _safe_put_track_frame(video_track, (new_frame, None), loop, 'video_track', drop_warn_state)
             self.record_video_data(combine_frame)
 
             for audio_frame in audio_frames:
@@ -391,7 +417,7 @@ class BaseReal:
                     new_frame = AudioFrame(format='s16', layout='mono', samples=frame.shape[0])
                     new_frame.planes[0].update(frame.tobytes())
                     new_frame.sample_rate=16000
-                    asyncio.run_coroutine_threadsafe(audio_track._queue.put((new_frame,eventpoint)), loop)
+                    _safe_put_track_frame(audio_track, (new_frame, eventpoint), loop, 'audio_track', drop_warn_state)
                 self.record_audio_data(frame)
             if self.opt.transport=='virtualcam':
                 vircam.sleep_until_next_frame()

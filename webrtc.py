@@ -162,7 +162,10 @@ def player_worker_thread(
     audio_track,
     video_track
 ):
-    container.render(quit_event,loop,audio_track,video_track)
+    try:
+        container.render(quit_event,loop,audio_track,video_track)
+    except Exception:
+        mylogger.exception("player_worker_thread crashed")
 
 class HumanPlayer:
 
